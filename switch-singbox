@@ -1,0 +1,193 @@
+#!/bin/sh
+
+# Description: Выбор конфигурации sing-box
+#
+# Copyright (C) 2025 Kappa Mikey 
+#
+
+# Настройки
+CONFIG_DIR="/etc/sing-box"
+CURRENT_CONFIG="$CONFIG_DIR/config.json"
+BACKUP_DIR="$CONFIG_DIR/backups"
+
+# Проверка запуска от root
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Error: This script must be run as root!" >&2
+    exit 1
+fi
+
+# Проверяем возможность записи в директорию
+if [ ! -w "$CONFIG_DIR" ]; then
+    echo "Error: No write access to $CONFIG_DIR!" >&2
+    exit 1
+fi
+
+# Создаем директорию резервных копий, если её нет
+mkdir -p "$BACKUP_DIR" || {
+    echo "Error: Failed to create backup directory $BACKUP_DIR!" >&2
+    exit 1
+}
+
+# Функция для получения всех значений "server" из файлов конфигураций в /etc/sing-box/ в одну строку через запятую
+get_server_names() {
+    local file="$1"
+    if [ ! -f "$file" ]; then
+        return 1
+    fi
+    local result=""
+    # Извлекаем все строки с "server" при помощи sed
+    while IFS= read -r line; do
+        # Удаляем символы возврата каретки и лишние пробелы
+        line=$(echo "$line" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
+        if [ -n "$line" ]; then
+            if [ -z "$result" ]; then
+                result="$line"
+            else
+                result="$result, $line"
+            fi
+        fi
+    done <<EOF
+$(sed -n 's/.*"server" *: *"\([^"]*\)".*/\1/p' "$file")
+EOF
+    echo "$result"
+}
+
+# Получение имени сервера из текущего конфига
+get_server_name() {
+    get_server_names "$CURRENT_CONFIG"
+}
+
+# Получение имени сервера из указанного конфига
+get_server_name_from_config() {
+    local config_file="$1"
+    get_server_names "$config_file"
+}
+
+# Поиск всех конфигов, кроме текущего и резервных
+find_configs() {
+    find "$CONFIG_DIR" -maxdepth 1 -type f -name "config*.json" | grep -vE "(config\.json|\.bak)$" | sort
+}
+
+# Создание резервной копии текущего конфига
+backup_config() {
+    timestamp=$(date +"%Y%m%d_%H%M%S")
+    backup_file="$BACKUP_DIR/config_$timestamp.bak"
+    cp "$CURRENT_CONFIG" "$backup_file"
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to create backup copy!" >&2
+        return 1
+    fi
+    echo "Backup created: $backup_file"
+}
+
+# Отображение меню выбора конфигурации
+show_menu() {
+    server_name=$(get_server_name)
+    if [ $? -ne 0 ]; then
+        return 1
+    fi
+    echo "Current config: $(basename "$CURRENT_CONFIG")"
+    echo "Server name: $server_name"
+    echo
+
+    configs=$(find_configs | sed '/^$/d')
+    if [ -z "$configs" ]; then
+        echo "No additional configurations found!"
+        exit 1
+    fi
+
+    # Сохраняем список конфигов во временный файл для построчного чтения
+    config_list=$(mktemp)
+    echo "$configs" > "$config_list"
+
+    echo "Available configurations:"
+    i=1
+    while IFS= read -r file; do
+        server_name_from_config=$(get_server_name_from_config "$file")
+        if [ -z "$server_name_from_config" ]; then
+            server_name_from_config="N/A"
+        fi
+        # Используем printf, чтобы гарантировать корректное форматирование
+        printf "%d) %s (Server: %s)\n" "$i" "$(basename "$file")" "$server_name_from_config"
+        i=$((i+1))
+    done < "$config_list"
+    echo
+    printf "0) Cancel and keep current config\n\n"
+
+    while true; do
+        read -p "Select configuration (0-$((i-1))): " choice
+        case "$choice" in
+            0)
+                echo "Cancelled. Configuration not changed."
+                rm "$config_list"
+                exit 0
+                ;;
+            [1-9]*)
+                if [ "$choice" -lt "$i" ] 2>/dev/null; then
+                    selected=$(sed -n "${choice}p" "$config_list")
+                    rm "$config_list"
+                    break
+                fi
+                ;;
+        esac
+        echo "Invalid choice, try again!"
+    done
+
+    swap_configs "$selected"
+}
+
+# Обмен конфигурационными файлами
+swap_configs() {
+    old_config="$CURRENT_CONFIG"
+    new_config="$1"
+
+    if ! backup_config; then
+        return 1
+    fi
+
+    temp_name="$old_config.bak"
+
+    mv "$old_config" "$temp_name"
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to rename old config!" >&2
+        return 1
+    fi
+
+    mv "$new_config" "$old_config"
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to move new config!" >&2
+        mv "$temp_name" "$old_config" # Попытка отката
+        return 1
+    fi
+
+    mv "$temp_name" "$new_config"
+    if [ $? -ne 0 ]; then
+        echo "Error: Failed to rename temp to new config!" >&2
+        mv "$old_config" "$new_config" # Попытка отката
+        return 1
+    fi
+}
+
+main() {
+    show_menu || exit 1
+
+    # Перезапуск служб для применения новой конфигурации
+    echo "Restarting sing-box..."
+    /etc/init.d/sing-box restart
+    if [ $? -ne 0 ]; then
+        echo "Error: sing-box restart failed" >&2
+        exit 1
+    fi
+
+    echo "Restarting network..."
+    /etc/init.d/network restart
+    if [ $? -ne 0 ]; then
+        echo "Error: network restart failed" >&2
+        exit 1
+    fi
+
+    echo "Success! New config: $(basename "$CURRENT_CONFIG")"
+    echo "Server name: $(get_server_name)"
+}
+
+main
