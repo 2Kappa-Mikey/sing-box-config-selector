@@ -43,7 +43,7 @@ Select configuration (0-10):
 
 Порядок установки:
 1. Скопировать switch-singbox  в папку /usr/bin/
-2. Сделать файл исполняемым  командой chmod +x /usr/local/bin/switch_singbox
+2. Сделать файл исполняемым  командой chmod +x /usr/bin/switch_singbox
 3. Запускать командой /usr/bin/switch-singbox
 4. или добавить alias  для запуска из любого места alias switch-config='/usr/bin/switch-singbox' 
 
