@@ -9,37 +9,8 @@
 
 Выглядит это примерно так после запуска скрипта:
 =============================================================================
-BusyBox v1.36.1 (2024-07-15 22:14:18 UTC) built-in shell (ash)
-  _______                     ________        __
- |       |.-----.-----.-----.|  |  |  |.----.|  |_
- |   -   ||  _  |  -__|     ||  |  |  ||   _||   _|
- |_______||   __|_____|__|__||________||__|  |____|
-          |__| W I R E L E S S   F R E E D O M
- -----------------------------------------------------
- OpenWrt 23.05.4, r24012-d8dd03c46f
- -----------------------------------------------------
-  Быстрый доступ:
- - Сменить конфиг Sing-Box: /root/switch-config
- =====================================================
- root@OpenWrt:~# /root/switch-config
-Current config: config.json
-Server name: config.example.com
+![image](https://github.com/user-attachments/assets/00e7c7d9-c1f4-43a3-a78e-a1eca46d5b2c)
 
-Available configurations:
-1) config_1.json (Server: config1.example.com)
-2) config_10.json (Server: config10.example.com)
-3) config_2.json (Server: config2.example.com)
-4) config_3.json (Server: config3.example.com)
-5) config_4.json (Server: config4.example.com)
-6) config_5.json (Server: config5.example.com)
-7) config_6.json (Server: config6.example.com)
-8) config_7.json (Server: config7.example.com, config7-1.example.com, config7-2.example.com)
-9) config_8.json (Server: config8.example.com)
-10) config_9.json (Server: config9.example.com, config9-1.example.com)
-
-0) Cancel and keep current config
-
-Select configuration (0-10):
 ==============================================================================
 
 Порядок установки:
