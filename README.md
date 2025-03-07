@@ -19,9 +19,9 @@
 
 Порядок установки:
 1. Скопировать switch-singbox  в папку /usr/bin/
-2. Сделать файл исполняемым  командой chmod +x /usr/bin/switch_singbox
-3. Запускать командой /usr/bin/switch-singbox
-4. или добавить alias  для запуска из любого места командой alias switch-config='/usr/bin/switch-singbox' 
+2. Сделать файл исполняемым  командой  <code>chmod +x /usr/bin/switch_singbox</code>
+3. Запускать командой <code>/usr/bin/switch-singbox</code>
+4. или добавить alias  для запуска из любого места командой <code>alias switch-config='/usr/bin/switch-singbox'</code> 
 
 5. Опционально можно добавить в MOTD (Message of the Day) информацию о быстром запуске и\или добавить в автозагрузку
 6. Место на роутере не резиновое, потому следует периодически чистить /etc/sing-box/backups/ от старых бэкапов. Возможно в будущем перепишу скрипт чтобы сохранялась только последняя рабочая конфигурация.
